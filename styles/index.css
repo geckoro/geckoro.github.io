@@ -1,0 +1,11 @@
+.container {
+    background: rgb(53, 53, 53);
+    overflow: hidden;
+}
+
+.circle {
+    width: 1000px;
+    height: 1000px;
+    position: absolute;
+    pointer-events: none;
+}
