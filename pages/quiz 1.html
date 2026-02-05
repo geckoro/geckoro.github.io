@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz din TXT</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background:#0b0c10; color:#e8e8ea; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+
+    .card {
+      background:#12141a;
+      border:1px solid #262a35;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    .row { display:flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 auto; min-width: 220px; }
+
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .muted { color:#a8adbd; font-size: 13px; line-height: 1.45; }
+    .small { font-size: 12px; color:#a8adbd; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+    .stats { display:flex; gap: 10px; flex-wrap: wrap; }
+    .pill {
+      background:#171a22;
+      border:1px solid #2a2f3d;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color:#d7d9e0;
+      white-space: nowrap;
+    }
+
+    .btn {
+      background:#2a7fff;
+      border:0;
+      color:white;
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 650;
+      min-height: 44px; /* touch target */
+    }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn.secondary { background:#212635; color:#dfe3ee; border:1px solid #2a2f3d; }
+    .btn.danger { background:#e24a4a; }
+
+    input[type="file"] { width: 100%; min-height: 44px; }
+
+    .qtitle { font-size: 18px; margin: 6px 0 10px; line-height: 1.35; }
+
+    .answers { display:flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
+    label.opt {
+      display:flex;
+      gap: 12px;
+      align-items:flex-start;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border:1px solid #2a2f3d;
+      background:#141824;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Hover only on devices that support it */
+    @media (hover:hover) {
+      label.opt:hover { border-color:#3a4160; }
+    }
+
+    label.opt input[type="checkbox"]{
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      accent-color: #2a7fff;
+      flex: 0 0 auto;
+    }
+
+    .letter {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display:grid;
+      place-items:center;
+      background:#1b2030;
+      border:1px solid #2a2f3d;
+      color:#cfe1ff;
+      font-weight:800;
+      flex:0 0 auto;
+    }
+
+    .feedback { margin-top: 12px; padding: 12px; border-radius: 12px; border:1px solid #2a2f3d; background:#11141f; }
+    .good { border-color:#2f7d4f; background: rgba(47,125,79,.12); }
+    .bad  { border-color:#b84b4b; background: rgba(184,75,75,.12); }
+
+    .grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 900px){ .grid { grid-template-columns: 1.2fr .8fr; } }
+
+    /* Mobile-first tweaks */
+    @media (max-width: 540px){
+      .wrap { padding: 12px; 
+      .intro { display: none; }
+
+    }
+      .card { padding: 14px; border-radius: 14px; }
+      h1 { font-size: 18px; }
+      .qtitle { font-size: 17px; }
+
+      /* Make action rows stack and buttons full width */
+      .row { gap: 10px; }
+      .row > * { min-width: 100%; }
+      .btn { width: 100%; }
+
+      /* Make stats easier to scan */
+      .stats { gap: 8px; }
+      .pill { flex: 1 1 calc(50% - 8px); text-align: center; }
+
+      /* Sticky mini-bar for progress on mobile (optional but helpful) */
+      #quizCard .small {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: rgba(18,20,26,.92);
+        backdrop-filter: blur(6px);
+        padding: 10px 10px;
+        border-radius: 12px;
+        border: 1px solid #262a35;
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h1>Quiz din fișier TXT</h1>
+        <p class="muted intro">
+          Format acceptat (exemplu):<br>
+          <span class="mono">1. Întrebarea<br>a) varianta a<br>B) varianta b<br>c) varianta c</span><br><br>
+          Litera mare la început (<span class="mono">A) B) C)</span>) = răspuns corect.
+          Dacă la o întrebare nu există nicio literă mare, atunci întrebarea are <b>0 răspunsuri corecte</b>.
+        </p>
+
+        <div class="row" style="margin-top:12px;">
+          <div>
+            <input id="fileInput" type="file" accept=".txt,text/plain" />
+            <div class="small" style="margin-top:6px;">Încarcă un .txt; întrebările se vor amesteca automat.</div>
+          </div>
+          <div class="row" style="justify-content:flex-end; gap: 8px;">
+            <button class="btn secondary" id="loadDemo" type="button">Încarcă demo</button>
+            <button class="btn" id="startBtn" type="button" disabled>Start (fișier)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stats">
+          <div class="pill">Rămase: <b id="remaining">-</b></div>
+          <div class="pill">Corecte: <b id="correct">0</b></div>
+          <div class="pill">Greșite: <b id="wrong">0</b></div>
+        </div>
+        <div class="small" style="margin-top:10px;">
+          Evaluare: pentru o întrebare cu mai multe răspunsuri corecte, trebuie să bifezi <b>exact</b> setul corect.
+        </div>
+        <div class="row" style="margin-top:12px; gap:8px;">
+          <button class="btn secondary" id="resetBtn" type="button" disabled>Reset</button>
+          <button class="btn danger" id="endBtn" type="button" disabled>Termină</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px; display:none;" id="quizCard">
+      <div class="row" style="justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div class="small">Întrebarea <b id="qIndex">0</b> / <b id="qTotal">0</b></div>
+          <p class="qtitle" id="questionText">-</p>
+        </div>
+      </div>
+
+      <div id="answers" class="answers"></div>
+
+      <div class="row" style="margin-top:12px; gap:8px;">
+        <button class="btn" id="checkBtn" type="button" disabled>Verifică</button>
+        <button class="btn secondary" id="nextBtn" type="button" disabled>Următoarea</button>
+      </div>
+
+      <div id="feedback" class="feedback" style="display:none;"></div>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    // --------- Helpers ----------
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function normalizeNewlines(s) {
+      return String(s).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    }
+
+    function parseQuizText(text) {
+      const t = normalizeNewlines(text).trim();
+      if (!t) return [];
+
+      const blocks = t.split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean);
+      const questions = [];
+
+      for (const block of blocks) {
+        const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) continue;
+
+        const qLine = lines[0];
+        const qMatch = qLine.match(/^\s*\d+\.\s*(.+)$/);
+        const question = (qMatch ? qMatch[1] : qLine).trim();
+
+        const options = [];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          const m = line.match(/^([a-zA-Z])\)\s*(.+)$/);
+          if (!m) continue;
+
+          const letterRaw = m[1];
+          const letter = letterRaw.toUpperCase();
+          const isCorrect = (letterRaw === letterRaw.toUpperCase());
+          const label = m[2].trim();
+
+          options.push({ letter, label, isCorrect });
+        }
+
+        if (question && options.length > 0) {
+          questions.push({ question, options });
+        }
+      }
+      return questions;
+    }
+
+    // --------- State ----------
+    let loadedQuestions = [];
+    let queue = [];
+    let current = null;
+
+    let stats = { correct: 0, wrong: 0, answered: 0 };
+
+    // Counter: "Întrebarea curentă / total"
+    let totalQuestions = 0;
+    let currentIndex = 0;
+
+    // --------- UI refs ----------
+    const fileInput = document.getElementById("fileInput");
+    const startBtn = document.getElementById("startBtn");
+    const loadDemoBtn = document.getElementById("loadDemo");
+    const resetBtn = document.getElementById("resetBtn");
+    const endBtn = document.getElementById("endBtn");
+
+    const quizCard = document.getElementById("quizCard");
+    const questionText = document.getElementById("questionText");
+    const answersEl = document.getElementById("answers");
+
+    const checkBtn = document.getElementById("checkBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const feedbackEl = document.getElementById("feedback");
+
+    const remainingEl = document.getElementById("remaining");
+    const correctEl = document.getElementById("correct");
+    const wrongEl = document.getElementById("wrong");
+
+    const qIndexEl = document.getElementById("qIndex");
+    const qTotalEl = document.getElementById("qTotal");
+
+    // --------- UI functions ----------
+    function updateStatsUI() {
+      correctEl.textContent = String(stats.correct);
+      wrongEl.textContent = String(stats.wrong);
+      remainingEl.textContent = String(queue.length);
+
+      qTotalEl.textContent = String(totalQuestions);
+      qIndexEl.textContent = String(current ? currentIndex : (totalQuestions || 0));
+    }
+
+    function setFeedback(type, html) {
+      feedbackEl.style.display = "block";
+      feedbackEl.classList.remove("good", "bad");
+      if (type === "good") feedbackEl.classList.add("good");
+      if (type === "bad") feedbackEl.classList.add("bad");
+      feedbackEl.innerHTML = html;
+    }
+
+    function clearFeedback() {
+      feedbackEl.style.display = "none";
+      feedbackEl.classList.remove("good", "bad");
+      feedbackEl.innerHTML = "";
+    }
+
+    function renderQuestion(q) {
+      current = q;
+
+      clearFeedback();
+      nextBtn.disabled = true;
+
+      questionText.textContent = q.question;
+      answersEl.innerHTML = "";
+
+      const correctCount = q.options.filter(o => o.isCorrect).length;
+
+      q.options.forEach((opt, idx) => {
+        const id = `opt_${idx}_${opt.letter}_${Math.random().toString(16).slice(2)}`;
+
+        const label = document.createElement("label");
+        label.className = "opt";
+        label.htmlFor = id;
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = id;
+        checkbox.dataset.letter = opt.letter;
+
+        checkbox.addEventListener("change", () => {
+          checkBtn.disabled = false;
+        });
+
+        const badge = document.createElement("div");
+        badge.className = "letter";
+        badge.textContent = opt.letter;
+
+        const text = document.createElement("div");
+        text.innerHTML = `<div>${opt.label}</div><div class="small">${
+          correctCount === 0 ? "Întrebarea poate avea 0 răspunsuri corecte." :
+          (correctCount === 1 ? "Poate avea 1 răspuns corect." : "Poate avea mai multe răspunsuri corecte.")
+        }</div>`;
+
+        label.appendChild(checkbox);
+        label.appendChild(badge);
+        label.appendChild(text);
+
+        answersEl.appendChild(label);
+      });
+
+      checkBtn.disabled = false;
+      updateStatsUI();
+    }
+
+    function getSelectedLetters() {
+      return [...answersEl.querySelectorAll('input[type="checkbox"]')]
+        .filter(x => x.checked)
+        .map(x => x.dataset.letter)
+        .sort();
+    }
+
+    function getCorrectLetters(q) {
+      return q.options.filter(o => o.isCorrect).map(o => o.letter).sort();
+    }
+
+    function sameArray(a, b) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    }
+
+    function disableInputs() {
+      [...answersEl.querySelectorAll('input[type="checkbox"]')].forEach(x => x.disabled = true);
+    }
+
+    function finishQuiz() {
+      current = null;
+
+      quizCard.style.display = "block";
+      questionText.textContent = "Gata! Ai terminat toate întrebările.";
+      answersEl.innerHTML = "";
+      checkBtn.disabled = true;
+      nextBtn.disabled = true;
+
+      const total = stats.correct + stats.wrong;
+      const pct = total ? Math.round((stats.correct / total) * 100) : 0;
+
+      setFeedback("good", `<b>Rezultat:</b> ${stats.correct} corecte, ${stats.wrong} greșite (${pct}%).`);
+
+      endBtn.disabled = true;
+      updateStatsUI();
+    }
+
+    function nextQuestionOrEnd() {
+      if (queue.length === 0) {
+        finishQuiz();
+        return;
+      }
+
+      const q = queue.shift();
+      currentIndex = totalQuestions - queue.length; // 1..N
+      renderQuestion(q);
+    }
+
+    function startQuiz(questions) {
+      queue = shuffle(questions.slice());
+
+      totalQuestions = questions.length;
+      currentIndex = 0;
+      current = null;
+
+      stats = { correct: 0, wrong: 0, answered: 0 };
+
+      quizCard.style.display = "block";
+      resetBtn.disabled = false;
+      endBtn.disabled = false;
+      nextBtn.disabled = true;
+      checkBtn.disabled = false;
+
+      nextQuestionOrEnd();
+      updateStatsUI();
+    }
+
+    function loadQuestionsFromFileText(text) {
+      const q = parseQuizText(text);
+
+      if (q.length === 0) {
+        loadedQuestions = [];
+        startBtn.disabled = true;
+        alert("Nu am găsit întrebări valide în fișier. Verifică formatul (linii goale între întrebări, opțiuni a) / B) etc.).");
+        return;
+      }
+
+      loadedQuestions = q;
+      startBtn.disabled = false;
+    }
+
+    // --------- Events ----------
+    fileInput.addEventListener("change", async (e) => {
+      try {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const text = await f.text();
+        loadQuestionsFromFileText(text);
+      } catch (err) {
+        console.error(err);
+        alert("Eroare la citirea fișierului.");
+      }
+    });
+
+    loadDemoBtn.addEventListener("click", () => {
+      const demo = `1. Care sunt numere prime?
+a) 4
+B) 5
+C) 7
+d) 9
+
+2. Alege toate afirmațiile adevărate:
+A) Apa fierbe la ~100°C la presiune atmosferică.
+b) Soarele se învârte în jurul Pământului.
+C) București e în România.
+
+3. Întrebare fără răspuns corect:
+a) Verde
+b) Albastru
+c) Roșu
+`;
+      const demoQuestions = parseQuizText(demo);
+      if (demoQuestions.length === 0) {
+        alert("Demo-ul nu a putut fi parsat (0 întrebări).");
+        return;
+      }
+      startQuiz(demoQuestions);
+    });
+
+    startBtn.addEventListener("click", () => {
+      if (loadedQuestions.length === 0) return;
+      startQuiz(loadedQuestions);
+    });
+
+    resetBtn.addEventListener("click", () => {
+      if (loadedQuestions.length > 0) startQuiz(loadedQuestions);
+    });
+
+    endBtn.addEventListener("click", () => {
+      queue = [];
+      finishQuiz();
+    });
+
+    checkBtn.addEventListener("click", () => {
+      if (!current) return;
+
+      const selected = getSelectedLetters();
+      const correct = getCorrectLetters(current);
+
+      disableInputs();
+
+      const ok = sameArray(selected, correct);
+      stats.answered += 1;
+
+      if (ok) stats.correct += 1;
+      else stats.wrong += 1;
+
+      const niceSelected = selected.length ? selected.join(", ") : "— (nimic)";
+      const niceCorrect = correct.length ? correct.join(", ") : "— (niciun răspuns corect)";
+
+      setFeedback(ok ? "good" : "bad",
+        `<div><b>${ok ? "Corect ✅" : "Greșit ❌"}</b></div>
+         <div class="small">Tu: <span class="mono">${niceSelected}</span></div>
+         <div class="small">Corect: <span class="mono">${niceCorrect}</span></div>`
+      );
+
+      checkBtn.disabled = true;
+      nextBtn.disabled = false;
+      updateStatsUI();
+    });
+
+    nextBtn.addEventListener("click", () => {
+      nextQuestionOrEnd();
+    });
+
+    // Init UI
+    updateStatsUI();
+  </script>
+</body>
+</html>

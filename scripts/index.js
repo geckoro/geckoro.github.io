@@ -6,6 +6,10 @@ $("#button-clouds").on("click", function () {
   window.location.href = "pages/clouds.html";
 });
 
+$("#button-quiz").on("click", function () {
+  window.location.href = "pages/quiz.html";
+});
+
 $(function () {
   $(document).mousemove(function (event) {
     $('.circle').css('width', '1000px');

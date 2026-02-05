@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz din TXT</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background:#0b0c10; color:#e8e8ea; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+    .card { background:#12141a; border:1px solid #262a35; border-radius: 16px; padding: 16px; }
+    .row { display:flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 auto; min-width: 220px; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .small { font-size: 12px; color:#a8adbd; }
+    .stats { display:flex; gap: 8px; flex-wrap: wrap; }
+    .pill { background:#171a22; border:1px solid #2a2f3d; border-radius: 999px; padding: 8px 12px; font-size: 13px; }
+    .btn { background:#2a7fff; border:0; color:white; padding: 12px 14px; border-radius: 12px; cursor:pointer; font-weight: 650; min-height: 44px; }
+    .btn.secondary { background:#212635; border:1px solid #2a2f3d; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    input[type="file"] { width: 100%; min-height: 44px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Quiz din TXT</h1>
+
+    <div class="row">
+      <button class="btn secondary" id="autoLoadBtn">Încarcă automat (intrebari.txt)</button>
+      <input id="fileInput" type="file" accept=".txt,text/plain" />
+      <button class="btn" id="startBtn" disabled>Start</button>
+    </div>
+
+    <div class="small" id="status">Nicio întrebare încărcată.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/*
+IMPORTANT:
+- Acest mod funcționează DOAR dacă rulezi fișierul prin HTTP (server),
+  NU prin dublu-click (file://).
+- De exemplu:
+    - VS Code Live Server
+    - python -m http.server
+*/
+
+const AUTO_PATH = "quizQuestions/intrebari.txt";
+
+let loadedQuestions = [];
+
+function normalizeNewlines(s) {
+  return String(s).replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");
+}
+
+function parseQuizText(text) {
+  const t = normalizeNewlines(text).trim();
+  if (!t) return [];
+  const blocks = t.split(/\\n\\s*\\n+/);
+  const questions = [];
+  for (const block of blocks) {
+    const lines = block.split("\\n").map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) continue;
+    const qLine = lines[0];
+    const qMatch = qLine.match(/^\\s*\\d+\\.\\s*(.+)$/);
+    const question = (qMatch ? qMatch[1] : qLine).trim();
+    const options = [];
+    for (let i = 1; i < lines.length; i++) {
+      const m = lines[i].match(/^([a-zA-Z])\\)\\s*(.+)$/);
+      if (!m) continue;
+      options.push({
+        letter: m[1].toUpperCase(),
+        label: m[2],
+        isCorrect: m[1] === m[1].toUpperCase()
+      });
+    }
+    if (question && options.length) questions.push({ question, options });
+  }
+  return questions;
+}
+
+async function loadFromPath() {
+  const status = document.getElementById("status");
+  try {
+    status.textContent = "Se încarcă din " + AUTO_PATH + " ...";
+    const res = await fetch(AUTO_PATH, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = await res.text();
+    loadedQuestions = parseQuizText(text);
+    if (!loadedQuestions.length) throw new Error("0 întrebări valide");
+    document.getElementById("startBtn").disabled = false;
+    status.textContent = "Încărcate automat: " + loadedQuestions.length + " întrebări.";
+  } catch (err) {
+    status.textContent = "Eroare la încărcarea automată. Rulezi din server HTTP?";
+    console.error(err);
+  }
+}
+
+document.getElementById("autoLoadBtn").addEventListener("click", loadFromPath);
+
+document.getElementById("fileInput").addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const text = await f.text();
+  loadedQuestions = parseQuizText(text);
+  document.getElementById("startBtn").disabled = loadedQuestions.length === 0;
+  document.getElementById("status").textContent =
+    loadedQuestions.length ? "Încărcate din fișier: " + loadedQuestions.length : "Fișier invalid.";
+});
+
+document.getElementById("startBtn").addEventListener("click", () => {
+  alert("Aici intră logica quiz-ului. Întrebări: " + loadedQuestions.length);
+});
+</script>
+</body>
+</html>
