@@ -56,6 +56,15 @@ let current = null;
 
 let stats = { correct: 0, wrong: 0, answered: 0 };
 
+// --------- Preset (GitHub) files ----------
+// IMPORTANT: folosește link-uri RAW (raw.githubusercontent.com) sau link direct către fișierul servit de GitHub Pages.
+// Exemplu RAW:
+// https://raw.githubusercontent.com/USERNAME/REPO/main/path/capitol1.txt
+const PRESET_FILES = [
+  { name: "variantele C si D", url: "https://geckoro.github.io/quiz_questions/variantele%20c%20si%20d.txt" },
+];
+
+
 // Counter: "Întrebarea curentă / total"
 let totalQuestions = 0;
 let currentIndex = 0;
@@ -82,6 +91,15 @@ const wrongEl = document.getElementById("wrong");
 const qIndexEl = document.getElementById("qIndex");
 const qTotalEl = document.getElementById("qTotal");
 
+
+// --------- Preset (GitHub) UI refs ----------
+const presetSelect = document.getElementById("presetSelect");
+const presetButtons = document.getElementById("presetButtons");
+const loadPresetBtn = document.getElementById("loadPresetBtn");
+const startPresetBtn = document.getElementById("startPresetBtn");
+const presetStatus = document.getElementById("presetStatus");
+
+
 // --------- UI functions ----------
 function updateStatsUI() {
   correctEl.textContent = String(stats.correct);
@@ -90,6 +108,78 @@ function updateStatsUI() {
 
   qTotalEl.textContent = String(totalQuestions);
   qIndexEl.textContent = String(current ? currentIndex : (totalQuestions || 0));
+}
+
+
+// --------- Preset (GitHub) loaders ----------
+function setPresetStatus(msg) {
+  if (!presetStatus) return;
+  presetStatus.textContent = msg || "";
+}
+
+async function loadQuestionsFromUrl(url, { autoStart = false } = {}) {
+  try {
+    setPresetStatus("Se încarcă...");
+    if (loadPresetBtn) loadPresetBtn.disabled = true;
+    if (startPresetBtn) startPresetBtn.disabled = true;
+
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+
+    loadQuestionsFromFileText(text);
+
+    if (loadedQuestions.length > 0) {
+      setPresetStatus(`Încărcat: ${loadedQuestions.length} întrebări.`);
+      if (startPresetBtn) startPresetBtn.disabled = false;
+      if (autoStart) startQuiz(loadedQuestions);
+    } else {
+      setPresetStatus("Nu s-au găsit întrebări valide în fișier.");
+    }
+  } catch (err) {
+    console.error(err);
+    setPresetStatus("Eroare la încărcarea fișierului preset.");
+    alert("Eroare la încărcarea fișierului preset (verifică URL-ul RAW și că fișierul există).");
+  } finally {
+    if (presetSelect && loadPresetBtn) loadPresetBtn.disabled = !presetSelect.value;
+  }
+}
+
+function initPresetUI() {
+  // Dacă elementele nu există (de ex. rulezi un HTML vechi), ieșim fără să stricăm pagina
+  if (!presetSelect || !presetButtons || !loadPresetBtn || !startPresetBtn) return;
+
+  // Populează combobox
+  PRESET_FILES.forEach((f, idx) => {
+    const opt = document.createElement("option");
+    opt.value = String(idx);
+    opt.textContent = f.name;
+    presetSelect.appendChild(opt);
+  });
+
+  presetSelect.addEventListener("change", () => {
+    loadPresetBtn.disabled = !presetSelect.value;
+    startPresetBtn.disabled = true;
+    setPresetStatus("");
+  });
+
+  loadPresetBtn.addEventListener("click", async () => {
+    const idx = Number(presetSelect.value);
+    const f = PRESET_FILES[idx];
+    if (!f) return;
+    await loadQuestionsFromUrl(f.url, { autoStart: false });
+  });
+
+  startPresetBtn.addEventListener("click", () => {
+    if (loadedQuestions.length === 0) return;
+    startQuiz(loadedQuestions);
+  });
+
+  // Butoane dedicate: click = încarcă și pornește direct
+  presetButtons.innerHTML = "";
+
+  loadPresetBtn.disabled = true;
+  startPresetBtn.disabled = true;
 }
 
 function setFeedback(type, html) {
@@ -325,3 +415,4 @@ nextBtn.addEventListener("click", () => {
 
 // Init UI
 updateStatsUI();
+initPresetUI();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quiz din TXT</title>
+  <title>Quiz</title>
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     * { box-sizing: border-box; }
@@ -139,23 +139,42 @@
   <div class="wrap">
     <div class="grid">
       <div class="card">
-        <h1>Quiz din fișier TXT</h1>
+        <h1>Quiz</h1>
         <p class="muted intro">
-          Format acceptat (exemplu):<br>
-          <span class="mono">1. Întrebarea<br>a) varianta a<br>B) varianta b<br>c) varianta c</span><br><br>
-          Litera mare la început (<span class="mono">A) B) C)</span>) = răspuns corect.
-          Dacă la o întrebare nu există nicio literă mare, atunci întrebarea are <b>0 răspunsuri corecte</b>.
+          Încarcă un .txt; întrebările se vor amesteca automat. Succes. :)
         </p>
 
         <div class="row" style="margin-top:12px;">
           <div>
             <input id="fileInput" type="file" accept=".txt,text/plain" />
-            <div class="small" style="margin-top:6px;">Încarcă un .txt; întrebările se vor amesteca automat.</div>
           </div>
           <div class="row" style="justify-content:flex-end; gap: 8px;">
             <button class="btn secondary" id="loadDemo" type="button">Încarcă demo</button>
             <button class="btn" id="startBtn" type="button" disabled>Start (fișier)</button>
           </div>
+
+
+        <!-- Preset files (GitHub) -->
+        <div class="row" style="margin-top:12px;">
+          <div>
+            <div class="small">Fișiere predefinite (de pe GitHub):</div>
+            <select id="presetSelect" class="btn secondary" style="width:100%; text-align:left;">
+              <option value="">— alege un fișier —</option>
+            </select>
+            <div class="small" style="margin-top:6px;">
+              Selectează un fișier sau apasă direct pe un buton din listă.
+            </div>
+          </div>
+
+          <div>
+            <div class="row" style="justify-content:flex-end; gap:8px;">
+              <button class="btn secondary" id="loadPresetBtn" type="button" disabled>Încarcă selecția</button>
+              <button class="btn secondary" id="startPresetBtn" type="button" disabled>Start (preset)</button>
+            </div>
+            <div id="presetButtons" class="row" style="margin-top:10px; gap:8px;"></div>
+            <div class="small" id="presetStatus" style="margin-top:6px;"></div>
+          </div>
+        </div>
         </div>
       </div>
 
