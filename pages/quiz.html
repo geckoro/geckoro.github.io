@@ -337,10 +337,7 @@
         badge.textContent = opt.letter;
 
         const text = document.createElement("div");
-        text.innerHTML = `<div>${opt.label}</div><div class="small">${
-          correctCount === 0 ? "Întrebarea poate avea 0 răspunsuri corecte." :
-          (correctCount === 1 ? "Poate avea 1 răspuns corect." : "Poate avea mai multe răspunsuri corecte.")
-        }</div>`;
+        text.innerHTML = `<div>${opt.label}</div>`;
 
         label.appendChild(checkbox);
         label.appendChild(badge);
