@@ -48,8 +48,6 @@ function parseQuizText(text) {
 }
 
 // --------- State ----------
-// IMPORTANT: Start (fișier) pornește DOAR întrebările încărcate din fișier.
-// Demo-ul rulează separat și NU afectează butonul Start.
 let loadedQuestions = []; // din fișier
 let queue = [];
 let current = null;
@@ -57,15 +55,12 @@ let current = null;
 let stats = { correct: 0, wrong: 0, answered: 0 };
 
 // --------- Preset (GitHub) files ----------
-// IMPORTANT: folosește link-uri RAW (raw.githubusercontent.com) sau link direct către fișierul servit de GitHub Pages.
-// Exemplu RAW:
-// https://raw.githubusercontent.com/USERNAME/REPO/main/path/capitol1.txt
 const PRESET_FILES = [
+  { name: "variantele A si B", url: "https://geckoro.github.io/quiz_questions/variantele%20a%20si%20b.txt" },
   { name: "variantele C si D", url: "https://geckoro.github.io/quiz_questions/variantele%20c%20si%20d.txt" },
 ];
 
-
-// Counter: "Întrebarea curentă / total"
+// Counter
 let totalQuestions = 0;
 let currentIndex = 0;
 
@@ -292,7 +287,6 @@ function nextQuestionOrEnd() {
 }
 
 function startQuiz(questions) {
-  // pornește cu un set de întrebări DAT (poate fi demo sau fișier)
   queue = shuffle(questions.slice());
 
   totalQuestions = questions.length;
@@ -338,7 +332,6 @@ fileInput.addEventListener("change", async (e) => {
   }
 });
 
-// DEMO: rulează separat, NU afectează loadedQuestions și NU "armează" butonul Start
 loadDemoBtn.addEventListener("click", () => {
   const demo = `1. Care sunt numere prime?
 a) 4
@@ -364,15 +357,13 @@ c) Roșu
   startQuiz(demoQuestions);
 });
 
-// Start: pornește DOAR întrebările din fișier
+// Start
 startBtn.addEventListener("click", () => {
   if (loadedQuestions.length === 0) return;
   startQuiz(loadedQuestions);
 });
 
 resetBtn.addEventListener("click", () => {
-  // reset = repornește ultimul set (cel curent). Pentru simplitate, repornim cu ce e în coadă+curent nu e trivial,
-  // așa că repornim cu loadedQuestions dacă există; altfel nu facem nimic.
   if (loadedQuestions.length > 0) startQuiz(loadedQuestions);
 });
 
