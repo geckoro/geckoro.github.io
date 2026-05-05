@@ -261,11 +261,11 @@ checkBtn.onclick=()=>{
   if(+sel.value===q[i].correctIndex){
     correct++;
     feedback.className="feedback good";
-    feedback.innerHTML="Corect";
+    feedback.innerHTML="Corect!";
   }else{
     wrong++;
     feedback.className="feedback bad";
-    feedback.innerHTML="Greșit";
+    feedback.innerHTML="Greșit, răspuns corect: " + "<b>" + q[i].answers.find(item => item.correct).normal + "</b>";
   }
 
   correctCount.textContent=correct;
