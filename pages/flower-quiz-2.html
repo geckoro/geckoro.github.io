@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz plante</title>
+
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background:#0b0c10; color:#e8e8ea; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+
+    .card {
+      background:#12141a;
+      border:1px solid #262a35;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    .row { display:flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 auto; min-width: 220px; }
+
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .muted { color:#a8adbd; font-size: 13px; line-height: 1.45; }
+    .small { font-size: 12px; color:#a8adbd; }
+
+    .stats { display:flex; gap: 10px; flex-wrap: wrap; }
+    .pill {
+      background:#171a22;
+      border:1px solid #2a2f3d;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color:#d7d9e0;
+    }
+
+    .btn {
+      background:#2a7fff;
+      border:0;
+      color:white;
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 650;
+    }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn.secondary { background:#212635; }
+    .btn.danger { background:#e24a4a; }
+
+    .answers { display:flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
+    label.opt {
+      display:flex;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      border:1px solid #2a2f3d;
+      background:#141824;
+      cursor:pointer;
+    }
+
+    label.opt input[type="radio"]{
+      width: 20px;
+      height: 20px;
+      accent-color: #2a7fff;
+    }
+
+    .letter {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display:grid;
+      place-items:center;
+      background:#1b2030;
+      border:1px solid #2a2f3d;
+      color:#cfe1ff;
+      font-weight:800;
+    }
+
+    .feedback { margin-top: 12px; padding: 12px; border-radius: 12px; }
+    .good { background: rgba(47,125,79,.2); }
+    .bad  { background: rgba(184,75,75,.2); }
+
+    img {
+      width:100%;
+      border-radius:12px;
+      margin-top:10px;
+    }
+	
+	#zoomModal img:active {
+		cursor: grabbing;
+	}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="card">
+<h1>Quiz plante 🌱</h1>
+
+<div class="row">
+<input id="fileInput" type="file" accept=".txt">
+<button class="btn" id="startBtn" disabled>Start</button>
+<select id="modeSelect" class="btn secondary">
+  <option value="normal">Mod NORMAL</option>
+  <option value="hard">Mod DIFICIL</option>
+</select>
+</div>
+</div>
+
+<div class="card">
+<div class="stats">
+<div class="pill">Rămase: <b id="remaining">0</b></div>
+<div class="pill">Corecte: <b id="correctCount">0</b></div>
+<div class="pill">Greșite: <b id="wrongCount">0</b></div>
+</div>
+</div>
+
+<div class="card" id="quizCard" style="display:none; margin-top:12px;">
+<div class="small">Întrebarea <b id="qIndex">0</b> / <b id="qTotal">0</b></div>
+
+<img id="img">
+
+<div id="answers" class="answers"></div>
+
+<div class="row" style="margin-top:12px;">
+<button class="btn" id="checkBtn">Verifică</button>
+<button class="btn secondary" id="nextBtn" disabled>Next</button>
+</div>
+
+<div id="feedback" class="feedback" style="display:none;"></div>
+</div>
+
+</div>
+
+<!-- ZOOM MODAL -->
+<div id="zoomModal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.9);
+  z-index:999;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+">
+
+  <img id="zoomImg" style="
+    max-width:none;
+    max-height:none;
+    cursor:grab;
+    transform:scale(1);
+    transition: transform .1s;
+  ">
+
+</div>
+
+<script>
+let q = [], i=0, correct=0, wrong=0;
+let mode = "normal";
+
+fileInput.onchange = ()=> startBtn.disabled = !fileInput.files.length;
+
+startBtn.onclick = ()=>{
+  mode = modeSelect.value;
+
+  const r=new FileReader();
+  r.onload=e=>{
+    q=parse(e.target.result);
+	shuffle(q);
+    quizCard.style.display="block";
+    show();
+  };
+  r.readAsText(fileInput.files[0]);
+};
+
+function parse(t){
+  return t.trim().split(/\n\s*\n/).map((b,idx)=>{
+    let lines=b.split("\n").filter(x=>x.trim());
+
+    let answers = [];
+    let correctIndex = -1;
+
+    lines.slice(1).forEach((l,i)=>{
+      let isCorrect = l[0] === l[0].toUpperCase();
+
+      let full = l.substring(3).trim();
+
+      // separăm textul
+      let outside = full;
+      let inside = "";
+
+      let match = full.match(/^(.*?)\s*\((.*?)\)$/);
+
+      if(match){
+        outside = match[1].trim();
+        inside = match[2].trim();
+      }
+
+      answers.push({
+        normal: full,
+        hard: inside || outside, // fallback dacă nu există paranteză
+        correct: isCorrect
+      });
+    });
+
+    correctIndex = answers.findIndex(a => a.correct);
+
+    return {
+      img:`../quiz_images/${idx+1}.jpg`,
+      answers,
+      correctIndex
+    };
+  });
+}
+
+function shuffle(arr) {
+  	for (let i = arr.length - 1; i > 0; i--) {
+    	const j = Math.floor(Math.random() * (i + 1));
+    	[arr[i], arr[j]] = [arr[j], arr[i]];
+  	}
+  	return arr;
+}
+
+function show(){
+  let cur=q[i];
+
+  img.src=cur.img;
+  answers.innerHTML="";
+
+  cur.answers.forEach((x,j)=>{
+    let text = (mode === "hard") ? x.hard : x.normal;
+
+    answers.innerHTML+=`
+      <label class="opt">
+        <input type="radio" name="a" value="${j}">
+        <div class="letter">${String.fromCharCode(65+j)}</div>
+        <div>${text}</div>
+      </label>`;
+  });
+
+  qIndex.textContent=i+1;
+  qTotal.textContent=q.length;
+  remaining.textContent=q.length-i;
+
+  feedback.style.display="none";
+  nextBtn.disabled=true;
+  checkBtn.disabled=false;
+}
+
+checkBtn.onclick=()=>{
+  let sel=document.querySelector('input[name="a"]:checked');
+  if(!sel) return;
+
+  // 🔒 BLOCARE răspunsuri
+  document.querySelectorAll('input[name="a"]').forEach(el => el.disabled = true);
+  console.log(q[i]);
+  if(+sel.value===q[i].correctIndex){
+    correct++;
+    feedback.className="feedback good";
+    feedback.innerHTML="Corect";
+  }else{
+    wrong++;
+    feedback.className="feedback bad";
+    feedback.innerHTML="Greșit";
+  }
+
+  correctCount.textContent=correct;
+  wrongCount.textContent=wrong;
+
+  feedback.style.display="block";
+  nextBtn.disabled=false;
+  checkBtn.disabled=true;
+};
+
+nextBtn.onclick=()=>{
+  i++;
+  if(i<q.length) show();
+  else alert("Final!");
+};
+
+const modal = document.getElementById("zoomModal");
+const zoomImg = document.getElementById("zoomImg");
+
+let scale = 1;
+let posX = 0, posY = 0;
+let isDragging = false;
+let startX, startY;
+
+// CLICK pe imagine → deschide zoom
+img.onclick = () => {
+  modal.style.display = "flex";
+  zoomImg.src = img.src;
+
+  scale = 1;
+  posX = 0;
+  posY = 0;
+  updateTransform();
+};
+
+// CLICK pe fundal → închide
+modal.onclick = (e) => {
+  if (e.target === modal) {
+    modal.style.display = "none";
+  }
+};
+
+// ZOOM cu scroll
+modal.addEventListener("wheel", (e) => {
+  e.preventDefault();
+
+  const delta = e.deltaY * -0.001;
+  scale += delta;
+  scale = Math.min(Math.max(1, scale), 5);
+
+  updateTransform();
+});
+
+// DRAG
+zoomImg.addEventListener("mousedown", (e) => {
+  isDragging = true;
+  startX = e.clientX - posX;
+  startY = e.clientY - posY;
+});
+
+window.addEventListener("mouseup", () => {
+  isDragging = false;
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (!isDragging) return;
+
+  posX = e.clientX - startX;
+  posY = e.clientY - startY;
+
+  updateTransform();
+});
+
+// transform
+function updateTransform(){
+  zoomImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+}
+</script>
+
+</body>
+</html>
