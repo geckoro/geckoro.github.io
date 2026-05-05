@@ -25,7 +25,6 @@
     h1 { font-size: 20px; margin: 0 0 12px; }
     .muted { color:#a8adbd; font-size: 13px; line-height: 1.45; }
     .small { font-size: 12px; color:#a8adbd; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 
     .stats { display:flex; gap: 10px; flex-wrap: wrap; }
     .pill {
@@ -35,7 +34,6 @@
       padding: 8px 12px;
       font-size: 13px;
       color:#d7d9e0;
-      white-space: nowrap;
     }
 
     .btn {
@@ -46,39 +44,27 @@
       border-radius: 12px;
       cursor:pointer;
       font-weight: 650;
-      min-height: 44px;
     }
     .btn:disabled { opacity:.45; cursor:not-allowed; }
-    .btn.secondary { background:#212635; color:#dfe3ee; border:1px solid #2a2f3d; }
+    .btn.secondary { background:#212635; }
     .btn.danger { background:#e24a4a; }
-
-    input[type="file"] { width: 100%; min-height: 44px; }
-
-    .qtitle { font-size: 18px; margin: 6px 0 10px; line-height: 1.35; }
 
     .answers { display:flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 
     label.opt {
       display:flex;
       gap: 12px;
-      align-items:flex-start;
-      padding: 12px 12px;
+      padding: 12px;
       border-radius: 12px;
       border:1px solid #2a2f3d;
       background:#141824;
       cursor:pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    @media (hover:hover) {
-      label.opt:hover { border-color:#3a4160; }
     }
 
     label.opt input[type="radio"]{
       width: 20px;
       height: 20px;
-      margin-top: 2px;
       accent-color: #2a7fff;
-      flex: 0 0 auto;
     }
 
     .letter {
@@ -91,15 +77,17 @@
       border:1px solid #2a2f3d;
       color:#cfe1ff;
       font-weight:800;
-      flex:0 0 auto;
     }
 
-    .feedback { margin-top: 12px; padding: 12px; border-radius: 12px; border:1px solid #2a2f3d; background:#11141f; }
-    .good { border-color:#2f7d4f; background: rgba(47,125,79,.12); }
-    .bad  { border-color:#b84b4b; background: rgba(184,75,75,.12); }
+    .feedback { margin-top: 12px; padding: 12px; border-radius: 12px; }
+    .good { background: rgba(47,125,79,.2); }
+    .bad  { background: rgba(184,75,75,.2); }
 
-    .grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
-    @media (min-width: 900px){ .grid { grid-template-columns: 1.2fr .8fr; } }
+    img {
+      width:100%;
+      border-radius:12px;
+      margin-top:10px;
+    }
 	
 	#zoomModal img:active {
 		cursor: grabbing;
@@ -109,32 +97,32 @@
 
 <body>
 <div class="wrap">
-<div class="grid">
 
 <div class="card">
 <h1>Quiz plante 🌱</h1>
-<p class="muted">Încarcă un .txt</p>
 
 <div class="row">
 <input id="fileInput" type="file" accept=".txt">
 <button class="btn" id="startBtn" disabled>Start</button>
+<select id="modeSelect" class="btn secondary">
+  <option value="normal">Mod NORMAL</option>
+  <option value="hard">Mod DIFICIL</option>
+</select>
 </div>
 </div>
 
 <div class="card">
 <div class="stats">
-<div class="pill">Rămase: <b id="remaining">-</b></div>
+<div class="pill">Rămase: <b id="remaining">0</b></div>
 <div class="pill">Corecte: <b id="correctCount">0</b></div>
 <div class="pill">Greșite: <b id="wrongCount">0</b></div>
 </div>
 </div>
 
-</div>
-
 <div class="card" id="quizCard" style="display:none; margin-top:12px;">
 <div class="small">Întrebarea <b id="qIndex">0</b> / <b id="qTotal">0</b></div>
 
-<img id="img" style="width:100%; border-radius:12px; margin-top:10px;">
+<img id="img">
 
 <div id="answers" class="answers"></div>
 
@@ -172,13 +160,17 @@
 
 <script>
 let q = [], i=0, correct=0, wrong=0;
+let mode = "normal";
 
 fileInput.onchange = ()=> startBtn.disabled = !fileInput.files.length;
 
 startBtn.onclick = ()=>{
+  mode = modeSelect.value;
+
   const r=new FileReader();
   r.onload=e=>{
     q=parse(e.target.result);
+	shuffle(q);
     quizCard.style.display="block";
     show();
   };
@@ -188,18 +180,49 @@ startBtn.onclick = ()=>{
 function parse(t){
   return t.trim().split(/\n\s*\n/).map((b,idx)=>{
     let lines=b.split("\n").filter(x=>x.trim());
-    let a=[], c=-1;
+
+    let answers = [];
+    let correctIndex = -1;
 
     lines.slice(1).forEach((l,i)=>{
-      if(l[0]===l[0].toUpperCase()) c=i;
-      a.push(l.substring(3));
+      let isCorrect = l[0] === l[0].toUpperCase();
+
+      let full = l.substring(3).trim();
+
+      // separăm textul
+      let outside = full;
+      let inside = "";
+
+      let match = full.match(/^(.*?)\s*\((.*?)\)$/);
+
+      if(match){
+        outside = match[1].trim();
+        inside = match[2].trim();
+      }
+
+      answers.push({
+        normal: full,
+        hard: inside || outside, // fallback dacă nu există paranteză
+        correct: isCorrect
+      });
     });
+
+    correctIndex = answers.findIndex(a => a.correct);
 
     return {
       img:`../quiz_images/${idx+1}.jpg`,
-      a, c
+      answers,
+      correctIndex
     };
   });
+}
+
+function shuffle(arr) {
+  	for (let i = arr.length - 1; i > 0; i--) {
+    	const j = Math.floor(Math.random() * (i + 1));
+    	[arr[i], arr[j]] = [arr[j], arr[i]];
+  	}
+  	return arr;
 }
 
 function show(){
@@ -208,12 +231,14 @@ function show(){
   img.src=cur.img;
   answers.innerHTML="";
 
-  cur.a.forEach((x,j)=>{
+  cur.answers.forEach((x,j)=>{
+    let text = (mode === "hard") ? x.hard : x.normal;
+
     answers.innerHTML+=`
       <label class="opt">
         <input type="radio" name="a" value="${j}">
         <div class="letter">${String.fromCharCode(65+j)}</div>
-        <div>${x}</div>
+        <div>${text}</div>
       </label>`;
   });
 
@@ -223,20 +248,24 @@ function show(){
 
   feedback.style.display="none";
   nextBtn.disabled=true;
+  checkBtn.disabled=false;
 }
 
 checkBtn.onclick=()=>{
   let sel=document.querySelector('input[name="a"]:checked');
   if(!sel) return;
 
-  if(+sel.value===q[i].c){
+  // 🔒 BLOCARE răspunsuri
+  document.querySelectorAll('input[name="a"]').forEach(el => el.disabled = true);
+  console.log(q[i]);
+  if(+sel.value===q[i].correctIndex){
     correct++;
     feedback.className="feedback good";
-    feedback.innerHTML="Corect";
+    feedback.innerHTML="Corect!";
   }else{
     wrong++;
     feedback.className="feedback bad";
-    feedback.innerHTML="Greșit";
+    feedback.innerHTML="Greșit, răspuns corect: " + "<b>" + q[i].answers.find(item => item.correct).normal + "</b>";
   }
 
   correctCount.textContent=correct;
@@ -244,6 +273,7 @@ checkBtn.onclick=()=>{
 
   feedback.style.display="block";
   nextBtn.disabled=false;
+  checkBtn.disabled=true;
 };
 
 nextBtn.onclick=()=>{
